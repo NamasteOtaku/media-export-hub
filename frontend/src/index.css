@@ -1,9 +1,18 @@
 @import "tailwindcss";
 
-@layer base {
-  body {
-    @apply bg-background text-primary antialiased;
-  }
+@theme {
+  /* Brand Colors */
+  --color-background: #ffffff;
+  --color-surface: #f9fafb;
+  --color-border: #e5e7eb;
+  --color-primary: #111827;
+  --color-secondary: #6b7280;
+  --color-accent: #f3f4f6;
+
+  /* Custom Utilities */
+  --shadow-subtle: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --font-sans: "Inter", system-ui, sans-serif;
+  --default-transition-duration: 150ms;
 }
 
 @layer base {
