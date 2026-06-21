@@ -3,28 +3,17 @@ import { ExtractorService } from '../services/extractor';
 
 const router = Router();
 
-interface ExtractRequest {
-    url: string;
-}
-
-router.post('/', async (req: Request<{}, {}, ExtractRequest>, res: Response) => {
+router.post('/', async (req: Request, res: Response) => {
     try {
         const { url } = req.body;
-
+        
         if (!url || typeof url !== 'string') {
-            return res.status(400).json({
-                success: false,
-                platform: 'unknown',
-                mediaType: 'unknown',
-                assets: [],
-                error: 'A valid URL string is required.'
+            return res.status(400).json({ 
+                success: false, 
+                error: 'Valid URL string required.' 
             });
         }
 
-        // Validate basic URL construct to prevent injection attacks
-        new URL(url); 
-
-        // Hand off to the advanced service layer
         const extractionResult = await ExtractorService.analyzeUrl(url);
 
         if (!extractionResult.success) {
@@ -33,13 +22,13 @@ router.post('/', async (req: Request<{}, {}, ExtractRequest>, res: Response) => 
 
         return res.status(200).json(extractionResult);
 
-    } catch (error) {
+    } catch (error: any) {
+        // VERBOSE DEBUG: Send the exact crash data to the browser
         return res.status(500).json({
             success: false,
-            platform: 'unknown',
-            mediaType: 'unknown',
-            assets: [],
-            error: 'Invalid URL format provided.'
+            error: 'Extraction Router Crash',
+            message: error.message,
+            stack: error.stack
         });
     }
 });
