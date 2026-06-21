@@ -19,6 +19,10 @@
       "destination": "/backend/src/index.ts"
     },
     {
+      "source": "/assets/(.*)",
+      "destination": "/frontend/assets/$1"
+    },
+    {
       "source": "/(.*)",
       "destination": "/frontend/index.html"
     }
