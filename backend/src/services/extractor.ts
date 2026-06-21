@@ -1,5 +1,3 @@
-import youtubedl from 'youtube-dl-exec';
-
 export interface ExtractedAsset {
     quality: string;
     url: string;
@@ -16,96 +14,74 @@ export interface ExtractionResult {
 
 export class ExtractorService {
     /**
-     * Executes a headless analysis of the URL to extract direct CDN links.
-     * Operates strictly in JSON-dump mode to prevent Vercel memory overflow.
+     * Orchestrates extraction via a stateless external microservice.
+     * Perfectly designed for Vercel Serverless environment limits.
      */
     static async analyzeUrl(targetUrl: string): Promise<ExtractionResult> {
         try {
-            const rawData = await youtubedl(targetUrl, {
-                dumpSingleJson: true,
-                noCheckCertificates: true,
-                noWarnings: true,
-                preferFreeFormats: true,
-                addHeader: [
-                    'referer:youtube.com',
-                    'user-agent:Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-                ]
+            // Utilizing a public open-source extraction REST proxy
+            const response = await fetch('https://co.wuk.sh/api/json', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({
+                    url: targetUrl,
+                    vQuality: "1080",
+                    isAudioOnly: false,
+                    isNoTTWatermark: true
+                })
             });
 
-            return this.mapDataToContract(rawData, targetUrl);
+            if (!response.ok) {
+                throw new Error('Upstream extraction proxy rejected the request.');
+            }
+
+            const data = await response.json();
+            return this.mapDataToContract(data, targetUrl);
 
         } catch (error: any) {
             console.error('[Extraction Service Error]:', error.message);
             
-            // Handle DRM or Geo-blocks explicitly as per product requirements
-            if (error.message.includes('Sign in to confirm your age') || error.message.includes('Private video')) {
-                return {
-                    success: false,
-                    platform: 'unknown',
-                    mediaType: 'unknown',
-                    assets: [],
-                    error: 'Content is private, age-restricted, or requires authentication. We do not bypass platform security.'
-                };
-            }
-
             return {
                 success: false,
                 platform: 'unknown',
                 mediaType: 'unknown',
                 assets: [],
-                error: 'Failed to extract media. The link may be invalid or the platform changed its architecture.'
+                error: 'Failed to extract media. The link may be private, invalid, or blocked by the platform.'
             };
         }
     }
 
     /**
-     * Normalizes complex yt-dlp JSON output into our strict frontend API contract.
+     * Maps the third-party proxy data into our strict internal UI contract.
      */
     private static mapDataToContract(data: any, originalUrl: string): ExtractionResult {
-        const platform = data.extractor_key || this.inferPlatform(originalUrl);
+        const platform = this.inferPlatform(originalUrl);
         const assets: ExtractedAsset[] = [];
 
-        // Determine media type
-        let mediaType: 'video' | 'image' | 'audio' | 'unknown' = 'unknown';
-        if (data.vcodec !== 'none') mediaType = 'video';
-        else if (data.acodec !== 'none') mediaType = 'audio';
-
-        // Extract available formats safely
-        if (Array.isArray(data.formats)) {
-            data.formats.forEach((format: any) => {
-                // Filter out broken streams and manifest files
-                if (format.protocol === 'm3u8_native' || format.protocol === 'https') {
-                    // Only map visually distinct qualities as requested
-                    if (format.format_note || format.height) {
-                        assets.push({
-                            quality: format.height ? `${format.height}p` : (format.format_note || 'Standard'),
-                            url: format.url,
-                            format: format.ext || 'mp4'
-                        });
-                    }
-                }
+        if (data.status === 'stream' || data.status === 'redirect') {
+            assets.push({
+                quality: 'Standard',
+                url: data.url,
+                format: 'mp4'
             });
-        } else if (data.url) {
-             // Fallback for flat image or simple single-file posts (like Instagram images)
-             mediaType = data.ext === 'jpg' || data.ext === 'png' ? 'image' : 'video';
-             assets.push({
-                 quality: 'Original',
-                 url: data.url,
-                 format: data.ext || 'unknown'
-             });
+        } else if (data.status === 'picker') {
+            data.picker.forEach((item: any) => {
+                assets.push({
+                    quality: item.quality ? `${item.quality}p` : 'Standard',
+                    url: item.url,
+                    format: 'mp4'
+                });
+            });
         }
-
-        // De-duplicate assets by quality to maintain a clean UI selector
-        const uniqueAssets = Array.from(new Map(assets.map(item => [item.quality, item])).values());
-
-        // Sort qualities descending (e.g., 1080p -> 720p)
-        uniqueAssets.sort((a, b) => parseInt(b.quality) - parseInt(a.quality));
 
         return {
             success: true,
             platform,
-            mediaType,
-            assets: uniqueAssets
+            mediaType: 'video',
+            assets
         };
     }
 
