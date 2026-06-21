@@ -42,5 +42,5 @@ if (process.env.NODE_ENV !== 'production') {
     });
 }
 
-// Export the Express API for Vercel's serverless orchestration
-export default app;
+// Export the Express API strictly for Vercel's serverless orchestration
+module.exports = app;

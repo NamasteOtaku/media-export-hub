@@ -20,7 +20,7 @@ export class ExtractorService {
     static async analyzeUrl(targetUrl: string): Promise<ExtractionResult> {
         try {
             // Utilizing a public open-source extraction REST proxy
-            const response = await fetch('https://co.wuk.sh/api/json', {
+            const response = await fetch('https://api.cobalt.tools/api/json', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
