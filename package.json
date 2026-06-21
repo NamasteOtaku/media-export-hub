@@ -1,10 +1,7 @@
 {
-  "devDependencies": {
-    "concurrently": "^10.0.3"
-  },
+  "name": "media-export-hub-monorepo",
+  "private": true,
   "scripts": {
-  "dev:backend": "cd backend && npm run dev",
-  "dev:frontend": "cd frontend && npm run dev",
-  "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\""
-}
+    "postinstall": "npm install --prefix backend && npm install --prefix frontend"
+  }
 }

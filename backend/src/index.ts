@@ -2,18 +2,27 @@ import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
-import extractRouter from './routes/extract'; // strictly without .ts
+import extractRouter from './routes/extract';
 
 const app = express();
 const PORT = process.env.PORT || 4000;
 
 // Security & Utility Middleware
 app.use(helmet());
+
+// Dynamic CORS Firewall: Allows localhost, Vercel previews, and Production
 app.use(cors({
-    origin: ['http://localhost:5173', 'https://mediaexporthub.com'],
+    origin: function (origin, callback) {
+        if (!origin || origin.includes('localhost') || origin.includes('mediaexporthub.com') || origin.includes('vercel.app')) {
+            callback(null, true);
+        } else {
+            callback(new Error('Blocked by CORS Firewall'));
+        }
+    },
     methods: ['GET', 'POST', 'OPTIONS'],
     credentials: true
 }));
+
 app.use(express.json({ limit: '10mb' }));
 app.use(morgan('combined'));
 
@@ -42,5 +51,5 @@ if (process.env.NODE_ENV !== 'production') {
     });
 }
 
-// Export the Express API strictly for Vercel's serverless orchestration
-module.exports = app;
+// Export the Express API for Vercel's serverless orchestration
+export default app;
