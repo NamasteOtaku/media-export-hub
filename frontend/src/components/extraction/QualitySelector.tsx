@@ -1,4 +1,4 @@
-import type { Asset } from '../../services/api';
+import type { Asset } from '../../services/api.ts';
 
 interface QualitySelectorProps {
   assets: Asset[];
