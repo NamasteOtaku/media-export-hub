@@ -2,7 +2,7 @@ import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
-import extractRouter from './routes/extract.ts';
+import extractRouter from './routes/extract'; // strictly without .ts
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -44,4 +44,3 @@ if (process.env.NODE_ENV !== 'production') {
 
 // Export the Express API for Vercel's serverless orchestration
 export default app;
-});
