@@ -1,0 +1,52 @@
+export interface ExtractRequest {
+  url: string;
+}
+
+export interface Asset {
+  quality: string;
+  url: string;
+  format: string;
+}
+
+export interface ExtractResponse {
+  success: boolean;
+  platform: string;
+  mediaType: 'video' | 'image' | 'audio' | 'unknown';
+  assets: Asset[];
+  error?: string;
+}
+
+// Uses relative path in production (Vercel routes it) and localhost in development
+const API_BASE_URL = import.meta.env.MODE === 'production' 
+  ? '/api' 
+  : 'http://localhost:4000/api';
+
+export const apiService = {
+  async extractMedia(url: string): Promise<ExtractResponse> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/extract`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ url }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('[API Service Error]:', error);
+      return {
+        success: false,
+        platform: 'unknown',
+        mediaType: 'unknown',
+        assets: [],
+        error: error instanceof Error ? error.message : 'An unexpected network error occurred.',
+      };
+    }
+  },
+};
