@@ -14,13 +14,30 @@ export interface ExtractionResult {
 
 export class ExtractorService {
     /**
-     * Orchestrates extraction via a stateless external microservice.
-     * Perfectly designed for Vercel Serverless environment limits.
+     * Orchestrates extraction via a High-Availability Dynamic Registry.
+     * Bypasses deprecated APIs by fetching live, healthy community nodes.
      */
     static async analyzeUrl(targetUrl: string): Promise<ExtractionResult> {
         try {
-            // Utilizing a public open-source extraction REST proxy
-            const response = await fetch('https://api.cobalt.tools/api/json', {
+            // 1. Query the live Cobalt instance registry
+            const registryResponse = await fetch('https://instances.hyper.lol/instances.json');
+            if (!registryResponse.ok) throw new Error('Registry unreachable.');
+            
+            const instances = await registryResponse.json();
+            
+            // 2. Filter for healthy instances running the modern v11+ architecture
+            const onlineInstances = instances.filter((i: any) => i.api_online === true && parseFloat(i.version) >= 11);
+            
+            if (onlineInstances.length === 0) throw new Error('No public extraction nodes available.');
+
+            // 3. Load balance by picking a random healthy instance
+            const randomInstance = onlineInstances[Math.floor(Math.random() * onlineInstances.length)];
+            
+            // The modern v11 endpoint is just the base URL
+            const apiUrl = randomInstance.api; 
+
+            // 4. Send the strictly formatted v11 payload
+            const response = await fetch(apiUrl, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -28,14 +45,13 @@ export class ExtractorService {
                 },
                 body: JSON.stringify({
                     url: targetUrl,
-                    vQuality: "1080",
-                    isAudioOnly: false,
-                    isNoTTWatermark: true
+                    videoQuality: "1080" // Modern v11 key
                 })
             });
 
             if (!response.ok) {
-                throw new Error('Upstream extraction proxy rejected the request.');
+                const errData = await response.json().catch(() => null);
+                throw new Error(errData?.error?.message || 'Upstream node rejected the media request.');
             }
 
             const data = await response.json();
@@ -43,36 +59,33 @@ export class ExtractorService {
 
         } catch (error: any) {
             console.error('[Extraction Service Error]:', error.message);
-            
             return {
                 success: false,
                 platform: 'unknown',
                 mediaType: 'unknown',
                 assets: [],
-                error: 'Failed to extract media. The link may be private, invalid, or blocked by the platform.'
+                error: 'Failed to extract media. The upstream nodes may be overloaded or the link is invalid.'
             };
         }
     }
 
-    /**
-     * Maps the third-party proxy data into our strict internal UI contract.
-     */
     private static mapDataToContract(data: any, originalUrl: string): ExtractionResult {
         const platform = this.inferPlatform(originalUrl);
         const assets: ExtractedAsset[] = [];
 
-        if (data.status === 'stream' || data.status === 'redirect') {
+        // Modern v11 Schema Status Mapping
+        if (data.status === 'tunnel' || data.status === 'redirect' || data.status === 'stream') {
             assets.push({
-                quality: 'Standard',
+                quality: 'High Resolution',
                 url: data.url,
                 format: 'mp4'
             });
         } else if (data.status === 'picker') {
-            data.picker.forEach((item: any) => {
+            data.picker.forEach((item: any, index: number) => {
                 assets.push({
-                    quality: item.quality ? `${item.quality}p` : 'Standard',
+                    quality: item.type === 'video' ? `Video ${index + 1}` : `Image ${index + 1}`,
                     url: item.url,
-                    format: 'mp4'
+                    format: item.type === 'video' ? 'mp4' : 'jpg'
                 });
             });
         }
@@ -92,6 +105,7 @@ export class ExtractorService {
         if (hostname.includes('twitter') || hostname.includes('x.com')) return 'Twitter';
         if (hostname.includes('reddit')) return 'Reddit';
         if (hostname.includes('facebook')) return 'Facebook';
+        if (hostname.includes('tiktok')) return 'TikTok';
         return 'Unknown';
     }
 }
