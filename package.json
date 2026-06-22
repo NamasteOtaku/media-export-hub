@@ -1,7 +1,8 @@
 {
-  "name": "media-export-hub-monorepo",
+  "name": "media-export-hub-root",
   "private": true,
-  "scripts": {
-    "postinstall": "npm install --prefix backend && npm install --prefix frontend"
-  }
+  "workspaces": [
+    "frontend",
+    "backend"
+  ]
 }
