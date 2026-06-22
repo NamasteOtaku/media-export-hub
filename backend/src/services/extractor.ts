@@ -23,7 +23,8 @@ export class ExtractorService {
             const registryResponse = await fetch('https://instances.hyper.lol/instances.json');
             if (!registryResponse.ok) throw new Error('Registry unreachable.');
             
-            const instances = await registryResponse.json();
+            // TS Strict Fix: Explicitly cast the unknown JSON response to an array
+            const instances = (await registryResponse.json()) as any[];
             
             // 2. Filter for healthy instances running the modern v11+ architecture
             const onlineInstances = instances.filter((i: any) => i.api_online === true && parseFloat(i.version) >= 11);
@@ -32,8 +33,6 @@ export class ExtractorService {
 
             // 3. Load balance by picking a random healthy instance
             const randomInstance = onlineInstances[Math.floor(Math.random() * onlineInstances.length)];
-            
-            // The modern v11 endpoint is just the base URL
             const apiUrl = randomInstance.api; 
 
             // 4. Send the strictly formatted v11 payload
@@ -41,16 +40,18 @@ export class ExtractorService {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Accept': 'application/json'
+                    'Accept': 'application/json',
+                    'User-Agent': 'MediaExportHub/1.0'
                 },
                 body: JSON.stringify({
                     url: targetUrl,
-                    videoQuality: "1080" // Modern v11 key
+                    videoQuality: "1080"
                 })
             });
 
             if (!response.ok) {
-                const errData = await response.json().catch(() => null);
+                // TS Strict Fix: Explicitly cast to any to allow optional chaining
+                const errData = (await response.json().catch(() => null)) as any;
                 throw new Error(errData?.error?.message || 'Upstream node rejected the media request.');
             }
 
