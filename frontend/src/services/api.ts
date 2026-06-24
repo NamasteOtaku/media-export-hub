@@ -16,10 +16,10 @@ export interface ExtractResponse {
   error?: string;
 }
 
-// Uses relative path in production (Vercel routes it) and localhost in development
+// Connects strictly to your high-powered Hugging Face Space backend in production
 const API_BASE_URL = import.meta.env.MODE === 'production' 
-  ? '/api' 
-  : 'http://localhost:4000/api';
+  ? 'https://yaardipanshu-media-extractor-api.hf.space' 
+  : 'http://localhost:7860';
 
 export const apiService = {
   async extractMedia(url: string): Promise<ExtractResponse> {
