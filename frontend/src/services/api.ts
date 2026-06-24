@@ -24,7 +24,7 @@ const API_BASE_URL = import.meta.env.MODE === 'production'
 export const apiService = {
   async extractMedia(url: string): Promise<ExtractResponse> {
     try {
-      const response = await fetch(`${API_BASE_URL}/extract`, {
+      const response = await fetch(API_BASE_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
